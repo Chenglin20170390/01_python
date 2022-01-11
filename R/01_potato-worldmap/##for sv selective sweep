@@ -1,0 +1,50 @@
+##for sv selective sweep
+vcftools --vcf P44.jaccard1.vcf --keep wild --out lwild20 --recode --recode-INFO-all
+vcftools --vcf P44.jaccard1.vcf --keep lcul --out lcul20 --recode --recode-INFO-all
+
+
+1. for single vcf
+vcftools --vcf lwild.recode.vcf  --window-pi 100000 --out lwild.100kb
+vcftools --vcf lcul.recode.vcf  --window-pi 100000 --out lcul.100kb
+vcftools --vcf lwild.recode.vcf  --window-pi 500000 --out lwild.500kb
+vcftools --vcf lcul.recode.vcf  --window-pi 500000 --out lcul.500kb
+vcftools --vcf lwild.recode.vcf  --window-pi 1000000 --out lwild.1mb
+vcftools --vcf lcul.recode.vcf  --window-pi 1000000 --out lcul.1mb
+
+2. pick up chr
+for j in {01..12};do
+    for i in lcul lwild; do
+    grep 'chr'$j'' $i.100kb.windowed.pi |awk -v i=$i '{OFS="\t"}{print $0,i}'> 01_pi_100kb/chr$j.$i.pi
+    grep 'chr'$j'' $i.500kb.windowed.pi |awk -v i=$i '{OFS="\t"}{print $0,i}'> 02_pi_500kb/chr$j.$i.pi
+    grep 'chr'$j'' $i.1mb.windowed.pi |awk -v i=$i '{OFS="\t"}{print $0,i}'> 03_pi_1mb/chr$j.$i.pi
+    done
+cat 01_pi_100kb/chr$j.lcul.pi 01_pi_100kb/chr$j.lwild.pi >01_pi_100kb/lgroup.chr$j.pi
+cat 02_pi_500kb/chr$j.lcul.pi 02_pi_500kb/chr$j.lwild.pi >02_pi_500kb/lgroup.chr$j.pi
+cat 03_pi_1mb/chr$j.lcul.pi 03_pi_1mb/chr$j.lwild.pi >03_pi_1mb/lgroup.chr$j.pi
+done
+
+for i in 01_pi_100kb 02_pi_500kb 03_pi_1mb;do
+    for j in {01..12};do 
+    awk '{OFS="\t"}{print $2,$3,$1,$5,$6}' $i/chr$j.lwild.pi > $i/chr$j.tem.lwild.pi
+    awk '{OFS="\t"}{print $2,$5,$6}' $i/chr$j.lcul.pi > $i/chr$j.tem.lcul.pi
+    join $i/chr$j.tem.lwild.pi $i/chr$j.tem.lcul.pi > $i/chr$j.join.pi
+    awk '{print $0,($4/$6)}' $i/chr$j.join.pi > $i/chr$j.ratio.pi
+    done
+cat $i/*.ratio.pi >$i/all.ratio.pi
+sort -r -k8 $i/all.ratio.pi >$i/all.sort.ratio.pi
+done
+
+head -n 364 01_pi_100kb/all.sort.ratio.pi |awk '{OFS="\t"}{print $3,$1,$2}'>01_pi_100kb/all.sort.ratio0.05.bed
+head -n 73 02_pi_500kb/all.sort.ratio.pi |awk '{OFS="\t"}{print $3,$1,$2}'>02_pi_500kb/all.sort.ratio0.05.bed
+head -n 37 03_pi_1mb/all.sort.ratio.pi |awk '{OFS="\t"}{print $3,$1,$2}'>03_pi_1mb/all.sort.ratio0.05.bed
+
+for i in 01_pi_100kb 02_pi_500kb 03_pi_1mb;do
+bedtools intersect -wa -a DM_v6.1_mRNA.bed -b $i/all.sort.ratio0.05.bed > $i/all.gene0.05.bed
+done
+
+for i in C656_P21_sv_pop.transformat.countfreq.filt.txt;do
+grep 'INS' $i  > P21.derived.c656.ins.txt
+grep 'DEL' $i  > P21.derived.c656.del.txt
+grep 'DUP' $i  > P21.derived.c656.dup.txt
+done
+

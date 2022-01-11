@@ -1,0 +1,222 @@
+##for plink convert
+for i in {01..12};do
+plink --make-bed --vcf ../lwild.recode.vcf --out lwild.chr$i --chr chr$i
+done
+
+for i in {01..12};do
+plink --make-bed --vcf ../lcul.recode.vcf --out lcul.chr$i --chr chr$i
+done
+
+for i in {01..12};do
+plink --bfile lwild.chr$i   --out lwild.chr$i --recode 01 transpose --output-missing-genotype 9  --allow-extra-chr --set-missing-var-ids @:# --keep-allele-order
+done
+
+for i in {01..12};do
+plink --bfile lcul.chr$i   --out lcul.chr$i --recode 01 transpose --output-missing-genotype 9  --allow-extra-chr --set-missing-var-ids @:# --keep-allele-order
+done
+
+for i in {01..12};do
+cut -d " " -f 5- lwild.chr$i.tped >popA.lwild.chr$i
+cut -d " " -f 5- lcul.chr$i.tped >popA.lcul.chr$i
+done
+
+##for map file_pos
+for i in {01..12};do
+cat P44.jaccard1.vcf | awk '($1=="'chr$i'"){print $1":"$2"\t'chr$i'\t"$2/100000000"\t"$2"\t"$4"\t"$5}' |grep -v '#' >chr$i.map
+done
+
+export PATH=/public/agis/huangsanwen_group/chenglin/softwares/XPCLR/bin:$PATH
+for i in {01..12};do
+xpclr --format txt --out ./xpclr.chr$i --map ./chr$i.map --popA ./popA.lwild.chr$i --popB ./popA.lcul.chr$i --chr $i --ld 0.95 --phased  --size 200000 --step 200000
+done
+
+for i in {01..12};do
+sed '1d' xpclr.chr$i >xpclr.chr$i.format
+done
+cat xpclr.chr*.format |awk 'NF == 13' > xpclr.all.format
+
+library(ggplot2)
+library(dplyr)
+library(qqman)
+dat<-read.table('xpclr.all.format1')
+names(dat)<- c('ID','CHROM1','Distance','Distancestop','pos_start','pos_stop','model','null','sel_coef','nSNPs','sSNPs_avail','xpclr','xpclr_norm','CHROM')
+dat$Distance <- rep(1:dim(dat)[1],times=rep(1))
+dat<-subset(dat, dat$xpclr_norm >0)
+X_axis <-  dat %>% group_by(CHROM) %>% summarize(center=( max(Distance) + min(Distance)+1 ) / 2 )
+dat<-dat[order(dat[,1]),]
+p<- ggplot(dat,aes(x=Distance,y=xpclr_norm)) +geom_point(aes(color=as.factor(CHROM)))+scale_x_continuous(label = X_axis$CHROM, breaks= X_axis$center)+scale_y_continuous(expand = c(0,0))+guides(color=guide_legend(title=NULL))+ labs(x='',y='XP-CLR Sv')
+p<- p +theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        legend.position = 'none')
+p
+ggsave(p, filename='xp-clr.sv.pdf', width = 12, height = 8)  ## PDF device
+
+grep -v '#' chr01.vcf | cut -f10- | sed 's/[.]/9/' |sed 's/[\t]/ /g' | sed 's/[|]/ /g' >chr01.wild.tped
+
+
+1
+
+
+
+sort -k1 -k2n 04_te_sv/$i.te.bed > 04_te_sv/$i.te.sort.bed
+python /vol3/agis/huangsanwen_group/chenglin/python/01_sv/04_sv_filter_dup.py 04_te_sv/$i.te.sort.bed 04_te_sv/$i.te.sort.rmdup.bed
+
+
+
+00000000000000000000000000000000000000000000
+
+
+
+p <- ggplot(data=dat1,aes(x=V1,colour=V2,fill=V2))+geom_histogram(bins=60,position = "dodge",stat="identity")+xlab('bins=60')
+
+
+
+plink --homozyg-window-het 0 --homozyg-snp 41 --homozyg-window-snp 41 --homozyg-window-missing 0 --homozyg-window-threshold 0.05 --homozyg-kb 500 --homozyg-density 5000 --homozyg-gap 1000 --vcf A157.allchr.vcf  
+
+
+C419.map2DM.txt
+C554.map2DM.txt
+DM.map2DM.txt
+E454.map2DM.txt
+Heinz.map2DM.txt
+
+DM
+Heinz
+C419
+C554
+E454
+
+DM
+554
+02-silde_wind/
+C337.wind.txt  C419.wind.txt  C656.wind.txt  E454.wind.txt   LA2093.wind.txt   x.slide_window.count_num.py
+C351.wind.txt  C554.wind.txt  DM.wind.txt    Heinz.wind.txt  list_for_fig.txt
+
+CMplot(a,type="p",plot.type="d",bin.size=1e6,chr.den.col=c("darkgreen", "yellow", "red"),file="jpg",memo="",dpi=300,
+    main="illumilla_60K",file.output=TRUE,verbose=TRUE,width=9,height=6)
+ CMplot(Pmap, col=c("#4197d8", "#f8c120", "#413496", "#495226",
+         "#d60b6f", "#e66519", "#d581b7", "#83d3ad", "#7c162c", "#26755d"),
+         bin.size=1e6, bin.range=NULL, pch=19, type="p", band=1, H=1.5, 
+         ylim=NULL, cex.axis=1, lwd.axis=1.5, cex.lab=1.5, plot.type="b",
+         multracks=FALSE, cex=c(0.5,1,1), r=0.3, outward=FALSE,
+         ylab=expression(-log[10](italic(p))), ylab.pos=3, xticks.pos=1,
+         mar = c(3,6,3,3), threshold = NULL, threshold.col="red", threshold.lwd=1, 
+         threshold.lty=2, amplify= TRUE, signal.cex = 1.5, signal.pch = 19, 
+         signal.col=NULL, signal.line=2, highlight=NULL, highlight.cex=1, 
+         highlight.pch=19, highlight.type="p", highlight.col="red", 
+         highlight.text=NULL, highlight.text.col="black", highlight.text.cex=1, 
+         highlight.text.xadj=NULL, highlight.text.yadj=NULL, 
+         highlight.text.font=3, chr.labels=NULL, chr.border=FALSE,
+         chr.labels.angle=0, chr.den.col="black", cir.band=1, cir.chr=TRUE, 
+         cir.chr.h=1.5, cir.legend=TRUE, cir.legend.cex=0.6, 
+         cir.legend.col="black", LOG10=TRUE, box=FALSE, conf.int=TRUE, 
+         conf.int.col=NULL, file.output=TRUE, file=c("jpg","pdf","tiff"), 
+         dpi=300, height=NULL, width=NULL, memo="", main="", main.cex=1.5, 
+         main.font=2, trait.legend.ncol=NULL, verbose=TRUE)
+
+
+
+conda acitvate py35
+py3=/public/agis/huangsanwen_group/chenglin/softwares/miniconda3/envs/py35/bin/python3
+cwd="."     # Change to working directory
+PATH_TO_SYRI="/public/agis/huangsanwen_group/chenglin/softwares/syri/syri/bin/syri" #Change the path to point to syri executable
+PATH_TO_PLOTSR="/public/agis/huangsanwen_group/chenglin/softwares/syri/syri/bin/plotsr" #Change the path to point to plotsr executable
+ref=/vol3/agis/huangsanwen_group/chenglin/work/1_reference/DM_v6.1_all_chr.fa
+
+
+for i in $(cat list.f);do
+#rm $i.fasta
+#/public/agis/huangsanwen_group/chenglin/softwares/miniconda3/bin/seqtk subseq ragtag_output/ragtag.scaffolds.fasta ../chr.list >$i.chr.fa
+#ln -s ragtag_output/ragtag.scaffolds.fasta $i.fasta
+cd $i/syri
+nohup $py3 $PATH_TO_SYRI -c $i.syri.flt.coords -d $i.syri.flt.delta -r $ref -q ../$i.chr.fa &
+sleep 5s
+#$py3 $PATH_TO_PLOTSR syri.out $ref ../$i.chr.fa  -H 8 -W 5
+cd ../..
+sleep 2s
+done
+
+--no-chrmatch
+
+for i in $(cat x00);do
+nucmer -t 20 --batch 1 -c 500 -b 500 -l 100 -p $i.syri $ref $i/$i.chr.fa
+#delta-filter -m -i 90 -l 100 $i.syri.delta > $i.syri.flt.delta
+#show-coords -THrd $i.syri.flt.delta > $i.syri.flt.coords
+done
+
+
+##aotumatic
+C056
+C574
+C419
+C447
+C580
+C001
+C058
+C450
+C656
+#second
+C813
+C151
+C093
+C356
+C454
+C872
+C098
+
+
+##non auto 
+C447
+C058
+C450
+C656
+
+for i in $(cat list.nona);do
+cd $i/syri
+sed 's/_RagTag//g' $i.syri.flt.delta >$i.syri.flt.name.delta
+sed 's/_RagTag//g' $i.syri.flt.coords >$i.syri.flt.name.coords
+sed 's/_RagTag//g' ../$i.chr.fa >$i.chr.name.fa
+nohup $py3 $PATH_TO_SYRI -c $i.syri.flt.name.coords -d $i.syri.flt.name.delta -r $ref -q $i.chr.name.fa &
+sleep 5s
+cd ../..
+sleep 2s
+done
+
+error
+C447
+c656
+C058
+
+
+##recode
+4 C098.syri.delta
+-rw-r--r-- 1 850 504 10079701 Apr 14 14:20 C872.syri.delta
+-rw-r--r-- 1 850 504 24337661 Apr 14 14:10 C454.syri.delta
+-rw-r--r-- 1 850 504  2454443 Apr 14 13:25 C356.syri.delta
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

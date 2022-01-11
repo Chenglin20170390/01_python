@@ -1,0 +1,32 @@
+## for chr picture jyx
+for i in $(cat list9);do
+awk '{OFS="\t"}{print $4,$1,$2,$3}' /vol3/agis/huangsanwen_group/jiayuxin/18-pan_potato/03-R/07-map_NLR_to_DM/01-map_coords/$i.map2DM.bed >$i.map2DM.txt
+done
+
+
+for i in $(cat list9);do
+    for j in {01..12};do 
+    grep 'chr'$j'' ../$i.map2DM.txt > $i.chr$j.txt
+    done
+done
+
+for t in {01..12};do
+    for j in {01..09};do 
+        for i in $(cat list9);do
+        awk -v n=chr$j '{OFS="\t"}{print $1,n,$3,$4,$2}' $i.chr$t.txt >ft.$i.chr$j
+        done
+    done
+    cat ft.DM.chr01 ft.C337.chr02 ft.C351.chr03 ft.C419.chr04 ft.C554.chr05 ft.C656.chr06 ft.E454.chr07 ft.Heinz.chr08 ft.LA2093.chr09> all.chr$t
+done
+
+
+chr.labels=NULL
+library("CMplot")
+args<-commandArgs(T)
+a=read.table(args[1])
+CMplot(a,type="p",plot.type="d",bin.size=1e6,chr.den.col=c("yellow", "red"),file="pdf",memo="",dpi=300,file.output=TRUE,verbose=TRUE,width=9,height=6,main='R gene',chr.labels=c('LA2093','Heinz','E454','C656','C554','C419','C351','C337','DM'))
+
+for i in {01..12};do
+/public/agis/huangsanwen_group/chenglin/softwares/miniconda3/envs/r42/bin/Rscript r.script all.chr$i 
+mv SNP-Density.V4.V5.pdf chr$i.pdf
+done

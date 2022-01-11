@@ -1,0 +1,94 @@
+##for snp selective sweep
+1. for single vcf
+for i in $(ls 06_td_snp/*.vcf.gz);do
+tem=${i##*/}
+id=`echo ${tem/.pass.snp.vcf.gz/}`
+id=`echo ${id/44pt./}`
+nohup vcftools --gzvcf $i --keep lwild --window-pi 100000 --out 01_snp_100kb/$id.lwild.100kb &
+nohup vcftools --gzvcf $i --keep lcul --window-pi 100000 --out 01_snp_100kb/$id.lcul.100kb &
+nohup vcftools --gzvcf $i --keep lwild --window-pi 500000 --out 02_snp_500kb/$id.lwild.500kb &
+nohup vcftools --gzvcf $i --keep lcul --window-pi 500000 --out 02_snp_500kb/$id.lcul.500kb &
+nohup vcftools --gzvcf $i --keep lwild --window-pi 1000000 --out 03_snp_1mb/$id.lwild.1mb &
+nohup vcftools --gzvcf $i --keep lcul --window-pi 1000000 --out 03_snp_1mb/$id.lcul.1mb &
+done
+
+2. pick up chr
+for j in {01..12};do
+    for i in lcul lwild; do
+    grep 'chr'$j'' $i.100kb.windowed.pi |awk -v i=$i '{OFS="\t"}{print $0,i}'> 01_pi_100kb/chr$j.$i.pi
+    grep 'chr'$j'' $i.500kb.windowed.pi |awk -v i=$i '{OFS="\t"}{print $0,i}'> 02_pi_500kb/chr$j.$i.pi
+    grep 'chr'$j'' $i.1mb.windowed.pi |awk -v i=$i '{OFS="\t"}{print $0,i}'> 03_pi_1mb/chr$j.$i.pi
+    done
+cat 01_pi_100kb/chr$j.lcul.pi 01_pi_100kb/chr$j.lwild.pi >01_pi_100kb/lgroup.chr$j.pi
+cat 02_pi_500kb/chr$j.lcul.pi 02_pi_500kb/chr$j.lwild.pi >02_pi_500kb/lgroup.chr$j.pi
+cat 03_pi_1mb/chr$j.lcul.pi 03_pi_1mb/chr$j.lwild.pi >03_pi_1mb/lgroup.chr$j.pi
+done
+
+##ALT=<ID=DEL,Description="Deletion">
+##ALT=<ID=DUP,Description="Duplication">
+##ALT=<ID=INV,Description="Inversion">
+##ALT=<ID=BND,Description="Translocation">
+##ALT=<ID=INS,Description="Insertion">
+
+
+for i in $(cat list44);
+do
+hom=$(grep -c '1/1' 05_ft5_qual10_svim/$i.sup5.qual10.vcf)
+het=$(grep -c '0/1' 05_ft5_qual10_svim/$i.sup5.qual10.vcf)
+ref=$(grep -c '0/0' 05_ft5_qual10_svim/$i.sup5.qual10.vcf)
+echo $hom >>hom
+echo $het >>het
+echo $ref >>ref
+expr $het + $hom \* 2 >>additive
+done
+paste list44 hom het ref additive > sv_burden
+sed -i '1i id\thomozygous\theterozygous\tref\tadditive' sv_burden ##add header
+rm hom het ref additive
+
+awk '{OFS="\t"}{print $1,$2,$6}' sv.all.txt >homo.sv.txt
+awk '{OFS="\t"}{print $1,$3,$6}' sv.all.txt >hete.sv.txt
+awk '{OFS="\t"}{print $1,$5,$6}' sv.all.txt >additive.sv.txt
+
+
+library(ggplot2)
+library (reshape2)
+
+dat<-read.table('additive.sv.txt',header=T)
+names(dat) <-c('ID','No','Types')
+#dat <-  melt(dat, id.vars= c ( "Types",'additive' ))
+p<- ggplot(dat,aes(x=Types,y=No)) + stat_boxplot(geom='errorbar', width=0.15,aes(color=Types))+geom_boxplot(aes(fill=Types)) +guides(color=guide_legend(title=NULL))+ labs(x='',y='Additive')
+p<- p +theme(axis.line.y = element_line(colour = "black"),
+        panel.grid = element_blank(),
+        panel.background = element_blank(),
+        legend.position = 'none')
+p+theme(panel.border = element_blank())
+p
+ggsave(p, filename='additive.sv.pdf', width = 8, height = 6)  ## PDF device
+就统计每个材料大于1Mb的SV（nucmer或者assemblytics）, 然后SV len分布的重新画一下
+
+SV的len只放del和ins的，用不等间距坐标，把大的也加上，50bp-1k，1-10k....类似的，也可以用柱形图表示
+
++ facet_wrap(~class)
+
+
+
+geom_histogram()
+dat=read.table('inv_duo.txt',header=T)
+options(scipen = 2000000) #for no scientifc writern like 5e+8
+pos<- (dat$pos2+dat$pos1)/2
+dat <- data.frame(dat,pos)
+p <-ggplot(dat,aes(x=pos, y=Number,fill=Types))+geom_bar(aes(x=pos,y=Number),stat="identity")+xlab('SV Length (kbp)')+ylab('Number')+ facet_wrap(~Types)
+p<-p +theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+         text = element_text(size = 20)) #legend.position = 'none')
+ggsave(p, filename='sv_len.seperate.his.invdup.pdf', width = 12, height = 8)  ## PDF device
+
+for i in $(cat list);do
+wc 03_1mb/$i.del.txt
+
+#awk '$7=="Deletion"' $i/$i'_Assemblytics.Assemblytics_structural_variants.bed' |awk '$5>1000000' >03_1mb/$i.del.txt
+#awk '$7=="Insertion"' $i/$i'_Assemblytics.Assemblytics_structural_variants.bed' |awk '$5>1000000' >03_1mb/$i.ins.txt
+done
